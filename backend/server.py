@@ -213,7 +213,7 @@ async def get_current_user_info(current_user: dict = Depends(get_current_user)):
 
 @app.get("/api/users")
 async def get_all_users(current_user: dict = Depends(get_current_user)):
-    users = await db.users.find({}, {"password": 0}).to_list(None)
+    users = await db.users.find({}, {"password": 0, "_id": 0}).to_list(None)
     return users
 
 if __name__ == "__main__":
