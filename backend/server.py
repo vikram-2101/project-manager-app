@@ -484,6 +484,365 @@ async def delete_project(project_id: str, current_user: dict = Depends(get_admin
     
     return {"message": "Project deleted successfully"}
 
+# Task Management APIs
+
+class TaskCreate(BaseModel):
+    title: str
+    description: str
+    project_id: str
+    assigned_to: Optional[str] = None
+    due_date: Optional[datetime] = None
+
+class TaskUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    assigned_to: Optional[str] = None
+    status: Optional[str] = None  # todo, in_progress, done
+    due_date: Optional[datetime] = None
+
+@app.post("/api/tasks")
+async def create_task(task_data: TaskCreate, current_user: dict = Depends(get_current_user)):
+    # Verify project exists and user has access
+    project = await db.projects.find_one({"project_id": task_data.project_id})
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found"
+        )
+    
+    # Check access permissions
+    if (current_user.get("role") != "admin" and 
+        current_user["user_id"] not in project["team_members"] and
+        current_user["user_id"] != project["created_by"]):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied to this project"
+        )
+    
+    # Verify assignee exists and is part of project
+    if task_data.assigned_to:
+        assignee = await db.users.find_one({"user_id": task_data.assigned_to})
+        if not assignee:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Assigned user not found"
+            )
+        
+        if (current_user.get("role") != "admin" and 
+            task_data.assigned_to not in project["team_members"] and
+            task_data.assigned_to != project["created_by"]):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Can only assign tasks to project team members"
+            )
+    
+    task_id = str(uuid.uuid4())
+    
+    task_doc = {
+        "task_id": task_id,
+        "project_id": task_data.project_id,
+        "title": task_data.title,
+        "description": task_data.description,
+        "assigned_to": task_data.assigned_to,
+        "status": "todo",
+        "due_date": task_data.due_date,
+        "created_by": current_user["user_id"],
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow()
+    }
+    
+    await db.tasks.insert_one(task_doc)
+    
+    # Create notification for assignee
+    if task_data.assigned_to and task_data.assigned_to != current_user["user_id"]:
+        notification_doc = {
+            "notification_id": str(uuid.uuid4()),
+            "user_id": task_data.assigned_to,
+            "message": f"You have been assigned to task \"{task_data.title}\" in project \"{project['title']}\"",
+            "type": "task_assigned",
+            "link": f"/projects/{task_data.project_id}",
+            "is_read": False,
+            "created_at": datetime.utcnow()
+        }
+        await db.notifications.insert_one(notification_doc)
+    
+    return {
+        "task_id": task_id,
+        "message": "Task created successfully"
+    }
+
+@app.get("/api/tasks")
+async def get_user_tasks(
+    status: Optional[str] = None,
+    project_id: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    query = {}
+    
+    if current_user.get("role") != "admin":
+        # Team members can only see tasks assigned to them or in their projects
+        user_projects = await db.projects.find(
+            {"team_members": current_user["user_id"]}, 
+            {"project_id": 1}
+        ).to_list(None)
+        project_ids = [p["project_id"] for p in user_projects]
+        
+        query["$or"] = [
+            {"assigned_to": current_user["user_id"]},
+            {"project_id": {"$in": project_ids}}
+        ]
+    
+    if status:
+        query["status"] = status
+    if project_id:
+        query["project_id"] = project_id
+    
+    tasks = await db.tasks.find(query, {"_id": 0}).to_list(None)
+    
+    # Add project and assignee details
+    for task in tasks:
+        # Get project details
+        project = await db.projects.find_one(
+            {"project_id": task["project_id"]},
+            {"title": 1, "project_id": 1, "_id": 0}
+        )
+        task["project_details"] = project
+        
+        # Get assignee details
+        if task.get("assigned_to"):
+            assignee = await db.users.find_one(
+                {"user_id": task["assigned_to"]},
+                {"user_id": 1, "full_name": 1, "email": 1, "_id": 0}
+            )
+            task["assignee_details"] = assignee
+        else:
+            task["assignee_details"] = None
+        
+        # Get creator details
+        creator = await db.users.find_one(
+            {"user_id": task["created_by"]},
+            {"user_id": 1, "full_name": 1, "email": 1, "_id": 0}
+        )
+        task["creator_details"] = creator
+    
+    return tasks
+
+@app.get("/api/tasks/{task_id}")
+async def get_task(task_id: str, current_user: dict = Depends(get_current_user)):
+    task = await db.tasks.find_one({"task_id": task_id}, {"_id": 0})
+    
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Task not found"
+        )
+    
+    # Check access permissions
+    project = await db.projects.find_one({"project_id": task["project_id"]})
+    if (current_user.get("role") != "admin" and 
+        current_user["user_id"] not in project["team_members"] and
+        current_user["user_id"] != project["created_by"] and
+        current_user["user_id"] != task.get("assigned_to")):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied to this task"
+        )
+    
+    # Add related details
+    task["project_details"] = {
+        "project_id": project["project_id"],
+        "title": project["title"]
+    }
+    
+    if task.get("assigned_to"):
+        assignee = await db.users.find_one(
+            {"user_id": task["assigned_to"]},
+            {"user_id": 1, "full_name": 1, "email": 1, "_id": 0}
+        )
+        task["assignee_details"] = assignee
+    else:
+        task["assignee_details"] = None
+    
+    creator = await db.users.find_one(
+        {"user_id": task["created_by"]},
+        {"user_id": 1, "full_name": 1, "email": 1, "_id": 0}
+    )
+    task["creator_details"] = creator
+    
+    # Get comments for this task
+    comments = await db.comments.find(
+        {"task_id": task_id}, 
+        {"_id": 0}
+    ).sort("created_at", 1).to_list(None)
+    
+    # Add author details to comments
+    for comment in comments:
+        author = await db.users.find_one(
+            {"user_id": comment["author_id"]},
+            {"user_id": 1, "full_name": 1, "email": 1, "_id": 0}
+        )
+        comment["author_details"] = author
+    
+    task["comments"] = comments
+    
+    return task
+
+@app.put("/api/tasks/{task_id}")
+async def update_task(
+    task_id: str, 
+    task_data: TaskUpdate, 
+    current_user: dict = Depends(get_current_user)
+):
+    task = await db.tasks.find_one({"task_id": task_id})
+    
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Task not found"
+        )
+    
+    # Check permissions
+    project = await db.projects.find_one({"project_id": task["project_id"]})
+    can_edit = (
+        current_user.get("role") == "admin" or
+        current_user["user_id"] == task["created_by"] or
+        current_user["user_id"] == project["created_by"] or
+        (current_user["user_id"] == task.get("assigned_to") and task_data.status)  # Assignee can only update status
+    )
+    
+    if not can_edit:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Permission denied to update this task"
+        )
+    
+    update_data = {"updated_at": datetime.utcnow()}
+    
+    # Only allow status update for assignees (unless admin/creator)
+    if (current_user["user_id"] == task.get("assigned_to") and 
+        current_user.get("role") != "admin" and
+        current_user["user_id"] != task["created_by"] and
+        current_user["user_id"] != project["created_by"]):
+        
+        if task_data.status and task_data.status in ["todo", "in_progress", "done"]:
+            update_data["status"] = task_data.status
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Assignees can only update task status"
+            )
+    else:
+        # Full edit permissions
+        if task_data.title is not None:
+            update_data["title"] = task_data.title
+        if task_data.description is not None:
+            update_data["description"] = task_data.description
+        if task_data.due_date is not None:
+            update_data["due_date"] = task_data.due_date
+        if task_data.status is not None and task_data.status in ["todo", "in_progress", "done"]:
+            update_data["status"] = task_data.status
+        if task_data.assigned_to is not None:
+            # Verify assignee exists and is part of project
+            if task_data.assigned_to:
+                assignee = await db.users.find_one({"user_id": task_data.assigned_to})
+                if not assignee:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Assigned user not found"
+                    )
+                
+                if (current_user.get("role") != "admin" and 
+                    task_data.assigned_to not in project["team_members"] and
+                    task_data.assigned_to != project["created_by"]):
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Can only assign tasks to project team members"
+                    )
+            
+            update_data["assigned_to"] = task_data.assigned_to
+    
+    old_status = task.get("status")
+    old_assignee = task.get("assigned_to")
+    
+    await db.tasks.update_one(
+        {"task_id": task_id},
+        {"$set": update_data}
+    )
+    
+    # Create notifications for status changes
+    if "status" in update_data and update_data["status"] != old_status:
+        # Notify project members about status change
+        notification_targets = set(project.get("team_members", []))
+        notification_targets.add(project["created_by"])
+        if task.get("assigned_to"):
+            notification_targets.add(task["assigned_to"])
+        
+        # Remove current user from notifications
+        notification_targets.discard(current_user["user_id"])
+        
+        notifications = []
+        for user_id in notification_targets:
+            notification_doc = {
+                "notification_id": str(uuid.uuid4()),
+                "user_id": user_id,
+                "message": f"Task \"{task['title']}\" status changed to {update_data['status'].replace('_', ' ').title()}",
+                "type": "status_changed",
+                "link": f"/projects/{task['project_id']}",
+                "is_read": False,
+                "created_at": datetime.utcnow()
+            }
+            notifications.append(notification_doc)
+        
+        if notifications:
+            await db.notifications.insert_many(notifications)
+    
+    # Create notification for new assignee
+    if ("assigned_to" in update_data and 
+        update_data["assigned_to"] != old_assignee and 
+        update_data["assigned_to"] and
+        update_data["assigned_to"] != current_user["user_id"]):
+        
+        notification_doc = {
+            "notification_id": str(uuid.uuid4()),
+            "user_id": update_data["assigned_to"],
+            "message": f"You have been assigned to task \"{task['title']}\" in project \"{project['title']}\"",
+            "type": "task_assigned",
+            "link": f"/projects/{task['project_id']}",
+            "is_read": False,
+            "created_at": datetime.utcnow()
+        }
+        await db.notifications.insert_one(notification_doc)
+    
+    return {"message": "Task updated successfully"}
+
+@app.delete("/api/tasks/{task_id}")
+async def delete_task(task_id: str, current_user: dict = Depends(get_current_user)):
+    task = await db.tasks.find_one({"task_id": task_id})
+    
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Task not found"
+        )
+    
+    # Check permissions (admin, task creator, or project creator)
+    project = await db.projects.find_one({"project_id": task["project_id"]})
+    if (current_user.get("role") != "admin" and 
+        current_user["user_id"] != task["created_by"] and
+        current_user["user_id"] != project["created_by"]):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Permission denied to delete this task"
+        )
+    
+    # Delete associated comments
+    await db.comments.delete_many({"task_id": task_id})
+    
+    # Delete task
+    await db.tasks.delete_one({"task_id": task_id})
+    
+    return {"message": "Task deleted successfully"}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8001)
