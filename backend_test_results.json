@@ -1,100 +1,100 @@
 {
   "summary": {
     "total_tests": 13,
-    "passed": 6,
-    "failed": 7,
-    "success_rate": 46.15384615384615
+    "passed": 12,
+    "failed": 1,
+    "success_rate": 92.3076923076923
   },
   "test_results": [
     {
       "test": "Health Check",
       "success": true,
       "message": "Backend is healthy and responding",
-      "timestamp": "2025-07-23T03:44:17.260359",
+      "timestamp": "2025-07-23T03:44:35.689306",
       "details": null
     },
     {
       "test": "Admin Signup",
-      "success": false,
-      "message": "Signup failed with status 400",
-      "timestamp": "2025-07-23T03:44:17.776304",
-      "details": "{\"detail\":\"Email already registered\"}"
+      "success": true,
+      "message": "Admin user created successfully with correct data",
+      "timestamp": "2025-07-23T03:44:36.424838",
+      "details": null
     },
     {
       "test": "Team Member Signup",
-      "success": false,
-      "message": "Signup failed with status 400",
-      "timestamp": "2025-07-23T03:44:18.281274",
-      "details": "{\"detail\":\"Email already registered\"}"
+      "success": true,
+      "message": "Team member created successfully with correct data",
+      "timestamp": "2025-07-23T03:44:37.158962",
+      "details": null
     },
     {
       "test": "Duplicate Email Prevention",
       "success": true,
       "message": "Duplicate email correctly rejected",
-      "timestamp": "2025-07-23T03:44:18.786518",
+      "timestamp": "2025-07-23T03:44:37.663757",
       "details": null
     },
     {
       "test": "Admin Login",
       "success": true,
       "message": "Admin login successful with valid token",
-      "timestamp": "2025-07-23T03:44:19.542593",
+      "timestamp": "2025-07-23T03:44:38.395754",
       "details": null
     },
     {
       "test": "Team Member Login",
       "success": true,
       "message": "Team member login successful",
-      "timestamp": "2025-07-23T03:44:20.274883",
+      "timestamp": "2025-07-23T03:44:39.127940",
       "details": null
     },
     {
       "test": "Invalid Login Prevention",
       "success": true,
       "message": "Invalid credentials correctly rejected",
-      "timestamp": "2025-07-23T03:44:21.007672",
+      "timestamp": "2025-07-23T03:44:39.860227",
       "details": null
     },
     {
       "test": "Get Current User (Admin)",
-      "success": false,
-      "message": "No admin token available",
-      "timestamp": "2025-07-23T03:44:21.507910",
+      "success": true,
+      "message": "Admin user info retrieved correctly",
+      "timestamp": "2025-07-23T03:44:40.365021",
       "details": null
     },
     {
       "test": "Get Current User (Team Member)",
-      "success": false,
-      "message": "No team member token available",
-      "timestamp": "2025-07-23T03:44:22.008047",
+      "success": true,
+      "message": "Team member user info retrieved correctly",
+      "timestamp": "2025-07-23T03:44:40.869583",
       "details": null
     },
     {
       "test": "Unauthorized Access Prevention",
       "success": false,
       "message": "Expected 401 status, got 403",
-      "timestamp": "2025-07-23T03:44:22.511350",
+      "timestamp": "2025-07-23T03:44:41.372435",
       "details": null
     },
     {
       "test": "Get All Users (Admin)",
-      "success": false,
-      "message": "No admin token available",
-      "timestamp": "2025-07-23T03:44:23.011571",
+      "success": true,
+      "message": "Retrieved 2 users without password fields",
+      "timestamp": "2025-07-23T03:44:41.878391",
       "details": null
     },
     {
       "test": "Get All Users (Team Member)",
-      "success": false,
-      "message": "No team member token available",
-      "timestamp": "2025-07-23T03:44:23.511738",
+      "success": true,
+      "message": "Team member can access user list with 2 users",
+      "timestamp": "2025-07-23T03:44:42.383773",
       "details": null
     },
     {
       "test": "Invalid Token Prevention",
       "success": true,
       "message": "Invalid token correctly rejected",
-      "timestamp": "2025-07-23T03:44:24.014739",
+      "timestamp": "2025-07-23T03:44:42.886865",
       "details": null
     }
   ]
