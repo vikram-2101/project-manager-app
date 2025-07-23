@@ -843,6 +843,270 @@ async def delete_task(task_id: str, current_user: dict = Depends(get_current_use
     
     return {"message": "Task deleted successfully"}
 
+# Comments Management APIs
+
+class CommentCreate(BaseModel):
+    task_id: str
+    content: str
+
+@app.post("/api/comments")
+async def create_comment(comment_data: CommentCreate, current_user: dict = Depends(get_current_user)):
+    # Verify task exists and user has access
+    task = await db.tasks.find_one({"task_id": comment_data.task_id})
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Task not found"
+        )
+    
+    # Check access permissions
+    project = await db.projects.find_one({"project_id": task["project_id"]})
+    if (current_user.get("role") != "admin" and 
+        current_user["user_id"] not in project["team_members"] and
+        current_user["user_id"] != project["created_by"] and
+        current_user["user_id"] != task.get("assigned_to")):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied to comment on this task"
+        )
+    
+    comment_id = str(uuid.uuid4())
+    
+    comment_doc = {
+        "comment_id": comment_id,
+        "task_id": comment_data.task_id,
+        "author_id": current_user["user_id"],
+        "content": comment_data.content,
+        "created_at": datetime.utcnow()
+    }
+    
+    await db.comments.insert_one(comment_doc)
+    
+    # Create notifications for task stakeholders
+    notification_targets = set(project.get("team_members", []))
+    notification_targets.add(project["created_by"])
+    if task.get("assigned_to"):
+        notification_targets.add(task["assigned_to"])
+    
+    # Remove current user from notifications
+    notification_targets.discard(current_user["user_id"])
+    
+    notifications = []
+    for user_id in notification_targets:
+        notification_doc = {
+            "notification_id": str(uuid.uuid4()),
+            "user_id": user_id,
+            "message": f"{current_user['full_name']} commented on task \"{task['title']}\"",
+            "type": "comment_added",
+            "link": f"/projects/{task['project_id']}",
+            "is_read": False,
+            "created_at": datetime.utcnow()
+        }
+        notifications.append(notification_doc)
+    
+    if notifications:
+        await db.notifications.insert_many(notifications)
+    
+    return {
+        "comment_id": comment_id,
+        "message": "Comment added successfully"
+    }
+
+@app.get("/api/comments/{task_id}")
+async def get_task_comments(task_id: str, current_user: dict = Depends(get_current_user)):
+    # Verify task exists and user has access
+    task = await db.tasks.find_one({"task_id": task_id})
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Task not found"
+        )
+    
+    # Check access permissions
+    project = await db.projects.find_one({"project_id": task["project_id"]})
+    if (current_user.get("role") != "admin" and 
+        current_user["user_id"] not in project["team_members"] and
+        current_user["user_id"] != project["created_by"] and
+        current_user["user_id"] != task.get("assigned_to")):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied to view comments on this task"
+        )
+    
+    comments = await db.comments.find(
+        {"task_id": task_id}, 
+        {"_id": 0}
+    ).sort("created_at", 1).to_list(None)
+    
+    # Add author details to comments
+    for comment in comments:
+        author = await db.users.find_one(
+            {"user_id": comment["author_id"]},
+            {"user_id": 1, "full_name": 1, "email": 1, "_id": 0}
+        )
+        comment["author_details"] = author
+    
+    return comments
+
+@app.delete("/api/comments/{comment_id}")
+async def delete_comment(comment_id: str, current_user: dict = Depends(get_current_user)):
+    comment = await db.comments.find_one({"comment_id": comment_id})
+    
+    if not comment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Comment not found"
+        )
+    
+    # Check permissions (admin or comment author)
+    if (current_user.get("role") != "admin" and 
+        current_user["user_id"] != comment["author_id"]):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Permission denied to delete this comment"
+        )
+    
+    await db.comments.delete_one({"comment_id": comment_id})
+    
+    return {"message": "Comment deleted successfully"}
+
+# Notifications Management APIs
+
+@app.get("/api/notifications")
+async def get_user_notifications(
+    limit: int = 50,
+    unread_only: bool = False,
+    current_user: dict = Depends(get_current_user)
+):
+    query = {"user_id": current_user["user_id"]}
+    
+    if unread_only:
+        query["is_read"] = False
+    
+    notifications = await db.notifications.find(
+        query, 
+        {"_id": 0}
+    ).sort("created_at", -1).limit(limit).to_list(None)
+    
+    return notifications
+
+@app.put("/api/notifications/{notification_id}/read")
+async def mark_notification_read(notification_id: str, current_user: dict = Depends(get_current_user)):
+    notification = await db.notifications.find_one({"notification_id": notification_id})
+    
+    if not notification:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Notification not found"
+        )
+    
+    if notification["user_id"] != current_user["user_id"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Permission denied to modify this notification"
+        )
+    
+    await db.notifications.update_one(
+        {"notification_id": notification_id},
+        {"$set": {"is_read": True}}
+    )
+    
+    return {"message": "Notification marked as read"}
+
+@app.put("/api/notifications/mark-all-read")
+async def mark_all_notifications_read(current_user: dict = Depends(get_current_user)):
+    await db.notifications.update_many(
+        {"user_id": current_user["user_id"], "is_read": False},
+        {"$set": {"is_read": True}}
+    )
+    
+    return {"message": "All notifications marked as read"}
+
+@app.get("/api/notifications/unread-count")
+async def get_unread_notifications_count(current_user: dict = Depends(get_current_user)):
+    count = await db.notifications.count_documents({
+        "user_id": current_user["user_id"],
+        "is_read": False
+    })
+    
+    return {"unread_count": count}
+
+# Dashboard Statistics APIs
+
+@app.get("/api/dashboard/stats")
+async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
+    stats = {}
+    
+    if current_user.get("role") == "admin":
+        # Admin sees all statistics
+        stats["total_projects"] = await db.projects.count_documents({})
+        stats["total_tasks"] = await db.tasks.count_documents({})
+        stats["total_users"] = await db.users.count_documents({})
+        
+        # Task statistics
+        task_stats = await db.tasks.aggregate([
+            {"$group": {"_id": "$status", "count": {"$sum": 1}}}
+        ]).to_list(None)
+        
+        stats["tasks_by_status"] = {
+            "todo": next((item["count"] for item in task_stats if item["_id"] == "todo"), 0),
+            "in_progress": next((item["count"] for item in task_stats if item["_id"] == "in_progress"), 0),
+            "done": next((item["count"] for item in task_stats if item["_id"] == "done"), 0)
+        }
+        
+        # Tasks due today
+        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        today_end = today_start.replace(hour=23, minute=59, second=59, microsecond=999999)
+        
+        stats["tasks_due_today"] = await db.tasks.count_documents({
+            "due_date": {"$gte": today_start, "$lte": today_end},
+            "status": {"$ne": "done"}
+        })
+        
+    else:
+        # Team member sees only their statistics
+        user_projects = await db.projects.find(
+            {"team_members": current_user["user_id"]}, 
+            {"project_id": 1}
+        ).to_list(None)
+        project_ids = [p["project_id"] for p in user_projects]
+        
+        stats["my_projects"] = len(project_ids)
+        
+        # My tasks statistics
+        my_tasks_query = {"assigned_to": current_user["user_id"]}
+        stats["my_total_tasks"] = await db.tasks.count_documents(my_tasks_query)
+        
+        # My task statistics by status
+        my_task_stats = await db.tasks.aggregate([
+            {"$match": my_tasks_query},
+            {"$group": {"_id": "$status", "count": {"$sum": 1}}}
+        ]).to_list(None)
+        
+        stats["my_tasks_by_status"] = {
+            "todo": next((item["count"] for item in my_task_stats if item["_id"] == "todo"), 0),
+            "in_progress": next((item["count"] for item in my_task_stats if item["_id"] == "in_progress"), 0),
+            "done": next((item["count"] for item in my_task_stats if item["_id"] == "done"), 0)
+        }
+        
+        # My tasks due today
+        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        today_end = today_start.replace(hour=23, minute=59, second=59, microsecond=999999)
+        
+        stats["my_tasks_due_today"] = await db.tasks.count_documents({
+            "assigned_to": current_user["user_id"],
+            "due_date": {"$gte": today_start, "$lte": today_end},
+            "status": {"$ne": "done"}
+        })
+    
+    # Unread notifications count
+    stats["unread_notifications"] = await db.notifications.count_documents({
+        "user_id": current_user["user_id"],
+        "is_read": False
+    })
+    
+    return stats
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8001)
