@@ -1,100 +1,100 @@
 {
   "summary": {
     "total_tests": 13,
-    "passed": 12,
-    "failed": 1,
-    "success_rate": 92.3076923076923
+    "passed": 13,
+    "failed": 0,
+    "success_rate": 100.0
   },
   "test_results": [
     {
       "test": "Health Check",
       "success": true,
       "message": "Backend is healthy and responding",
-      "timestamp": "2025-07-23T03:44:35.689306",
+      "timestamp": "2025-07-23T03:45:06.101154",
       "details": null
     },
     {
       "test": "Admin Signup",
       "success": true,
       "message": "Admin user created successfully with correct data",
-      "timestamp": "2025-07-23T03:44:36.424838",
+      "timestamp": "2025-07-23T03:45:06.836640",
       "details": null
     },
     {
       "test": "Team Member Signup",
       "success": true,
       "message": "Team member created successfully with correct data",
-      "timestamp": "2025-07-23T03:44:37.158962",
+      "timestamp": "2025-07-23T03:45:07.572650",
       "details": null
     },
     {
       "test": "Duplicate Email Prevention",
       "success": true,
       "message": "Duplicate email correctly rejected",
-      "timestamp": "2025-07-23T03:44:37.663757",
+      "timestamp": "2025-07-23T03:45:08.077318",
       "details": null
     },
     {
       "test": "Admin Login",
       "success": true,
       "message": "Admin login successful with valid token",
-      "timestamp": "2025-07-23T03:44:38.395754",
+      "timestamp": "2025-07-23T03:45:08.809850",
       "details": null
     },
     {
       "test": "Team Member Login",
       "success": true,
       "message": "Team member login successful",
-      "timestamp": "2025-07-23T03:44:39.127940",
+      "timestamp": "2025-07-23T03:45:09.541398",
       "details": null
     },
     {
       "test": "Invalid Login Prevention",
       "success": true,
       "message": "Invalid credentials correctly rejected",
-      "timestamp": "2025-07-23T03:44:39.860227",
+      "timestamp": "2025-07-23T03:45:10.273074",
       "details": null
     },
     {
       "test": "Get Current User (Admin)",
       "success": true,
       "message": "Admin user info retrieved correctly",
-      "timestamp": "2025-07-23T03:44:40.365021",
+      "timestamp": "2025-07-23T03:45:10.777627",
       "details": null
     },
     {
       "test": "Get Current User (Team Member)",
       "success": true,
       "message": "Team member user info retrieved correctly",
-      "timestamp": "2025-07-23T03:44:40.869583",
+      "timestamp": "2025-07-23T03:45:11.282265",
       "details": null
     },
     {
       "test": "Unauthorized Access Prevention",
-      "success": false,
-      "message": "Expected 401 status, got 403",
-      "timestamp": "2025-07-23T03:44:41.372435",
+      "success": true,
+      "message": "Unauthorized access correctly blocked with status 403",
+      "timestamp": "2025-07-23T03:45:11.785069",
       "details": null
     },
     {
       "test": "Get All Users (Admin)",
       "success": true,
       "message": "Retrieved 2 users without password fields",
-      "timestamp": "2025-07-23T03:44:41.878391",
+      "timestamp": "2025-07-23T03:45:12.290435",
       "details": null
     },
     {
       "test": "Get All Users (Team Member)",
       "success": true,
       "message": "Team member can access user list with 2 users",
-      "timestamp": "2025-07-23T03:44:42.383773",
+      "timestamp": "2025-07-23T03:45:12.796135",
       "details": null
     },
     {
       "test": "Invalid Token Prevention",
       "success": true,
       "message": "Invalid token correctly rejected",
-      "timestamp": "2025-07-23T03:44:42.886865",
+      "timestamp": "2025-07-23T03:45:13.299181",
       "details": null
     }
   ]
