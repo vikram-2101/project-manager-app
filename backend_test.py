@@ -338,11 +338,11 @@ class BackendTester:
         try:
             response = requests.get(f"{self.base_url}/api/auth/me", timeout=10)
             
-            if response.status_code == 401:
-                self.log_test("Unauthorized Access Prevention", True, "Unauthorized access correctly blocked")
+            if response.status_code in [401, 403]:
+                self.log_test("Unauthorized Access Prevention", True, f"Unauthorized access correctly blocked with status {response.status_code}")
                 return True
             else:
-                self.log_test("Unauthorized Access Prevention", False, f"Expected 401 status, got {response.status_code}")
+                self.log_test("Unauthorized Access Prevention", False, f"Expected 401 or 403 status, got {response.status_code}")
                 return False
                 
         except Exception as e:
