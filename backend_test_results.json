@@ -1,0 +1,101 @@
+{
+  "summary": {
+    "total_tests": 13,
+    "passed": 10,
+    "failed": 3,
+    "success_rate": 76.92307692307693
+  },
+  "test_results": [
+    {
+      "test": "Health Check",
+      "success": true,
+      "message": "Backend is healthy and responding",
+      "timestamp": "2025-07-23T03:43:43.278233",
+      "details": null
+    },
+    {
+      "test": "Admin Signup",
+      "success": true,
+      "message": "Admin user created successfully with correct data",
+      "timestamp": "2025-07-23T03:43:44.011892",
+      "details": null
+    },
+    {
+      "test": "Team Member Signup",
+      "success": true,
+      "message": "Team member created successfully with correct data",
+      "timestamp": "2025-07-23T03:43:44.745134",
+      "details": null
+    },
+    {
+      "test": "Duplicate Email Prevention",
+      "success": true,
+      "message": "Duplicate email correctly rejected",
+      "timestamp": "2025-07-23T03:43:45.249813",
+      "details": null
+    },
+    {
+      "test": "Admin Login",
+      "success": true,
+      "message": "Admin login successful with valid token",
+      "timestamp": "2025-07-23T03:43:45.982874",
+      "details": null
+    },
+    {
+      "test": "Team Member Login",
+      "success": true,
+      "message": "Team member login successful",
+      "timestamp": "2025-07-23T03:43:46.714736",
+      "details": null
+    },
+    {
+      "test": "Invalid Login Prevention",
+      "success": true,
+      "message": "Invalid credentials correctly rejected",
+      "timestamp": "2025-07-23T03:43:47.446643",
+      "details": null
+    },
+    {
+      "test": "Get Current User (Admin)",
+      "success": true,
+      "message": "Admin user info retrieved correctly",
+      "timestamp": "2025-07-23T03:43:47.951222",
+      "details": null
+    },
+    {
+      "test": "Get Current User (Team Member)",
+      "success": true,
+      "message": "Team member user info retrieved correctly",
+      "timestamp": "2025-07-23T03:43:48.455565",
+      "details": null
+    },
+    {
+      "test": "Unauthorized Access Prevention",
+      "success": false,
+      "message": "Expected 401 status, got 403",
+      "timestamp": "2025-07-23T03:43:48.958392",
+      "details": null
+    },
+    {
+      "test": "Get All Users (Admin)",
+      "success": false,
+      "message": "Request failed with status 500",
+      "timestamp": "2025-07-23T03:43:49.463812",
+      "details": "Internal Server Error"
+    },
+    {
+      "test": "Get All Users (Team Member)",
+      "success": false,
+      "message": "Request failed with status 500",
+      "timestamp": "2025-07-23T03:43:49.969207",
+      "details": "Internal Server Error"
+    },
+    {
+      "test": "Invalid Token Prevention",
+      "success": true,
+      "message": "Invalid token correctly rejected",
+      "timestamp": "2025-07-23T03:43:50.472469",
+      "details": null
+    }
+  ]
+}
