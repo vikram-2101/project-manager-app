@@ -1,0 +1,7 @@
+# backend/.gitignore and frontend/.gitignore
+node_modules/
+.env
+package-lock.json
+dist/
+build/
+coverage/

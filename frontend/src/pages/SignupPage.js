@@ -1,16 +1,16 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import React, { useState } from "react";
+import { Link } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 const SignupPage = () => {
   const [formData, setFormData] = useState({
-    fullName: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    role: 'team_member'
+    fullName: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    role: "team_member",
   });
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const { signup } = useAuth();
@@ -18,40 +18,40 @@ const SignupPage = () => {
   const handleChange = (e) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     });
-    if (error) setError('');
+    if (error) setError("");
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
+    setError("");
 
     // Validation
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
+      setError("Passwords do not match");
       setLoading(false);
       return;
     }
 
     if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters long');
+      setError("Password must be at least 6 characters long");
       setLoading(false);
       return;
     }
 
     const result = await signup(
-      formData.email, 
-      formData.password, 
-      formData.fullName, 
+      formData.email,
+      formData.password,
+      formData.fullName,
       formData.role
     );
-    
+
     if (!result.success) {
       setError(result.message);
     }
-    
+
     setLoading(false);
   };
 
@@ -60,8 +60,18 @@ const SignupPage = () => {
       <div className="max-w-md w-full space-y-8">
         <div>
           <div className="mx-auto h-12 w-12 bg-primary-500 rounded-xl flex items-center justify-center">
-            <svg className="h-8 w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+            <svg
+              className="h-8 w-8 text-white"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
+              />
             </svg>
           </div>
           <h2 className="mt-6 text-center text-3xl font-bold text-neutral-900">
@@ -71,7 +81,7 @@ const SignupPage = () => {
             Join us to manage your projects efficiently
           </p>
         </div>
-        
+
         <div className="card p-8">
           <form className="space-y-6" onSubmit={handleSubmit}>
             {error && (
@@ -81,7 +91,10 @@ const SignupPage = () => {
             )}
 
             <div>
-              <label htmlFor="fullName" className="block text-sm font-medium text-neutral-700 mb-2">
+              <label
+                htmlFor="fullName"
+                className="block text-sm font-medium text-neutral-700 mb-2"
+              >
                 Full Name
               </label>
               <input
@@ -95,9 +108,12 @@ const SignupPage = () => {
                 onChange={handleChange}
               />
             </div>
-            
+
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-neutral-700 mb-2">
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-neutral-700 mb-2"
+              >
                 Email address
               </label>
               <input
@@ -113,7 +129,7 @@ const SignupPage = () => {
               />
             </div>
 
-            <div>
+            {/* <div>
               <label htmlFor="role" className="block text-sm font-medium text-neutral-700 mb-2">
                 Role
               </label>
@@ -133,10 +149,13 @@ const SignupPage = () => {
                   'Can view assigned projects, complete tasks, and add comments'
                 }
               </p>
-            </div>
+            </div> */}
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-neutral-700 mb-2">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-neutral-700 mb-2"
+              >
                 Password
               </label>
               <input
@@ -152,7 +171,10 @@ const SignupPage = () => {
             </div>
 
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-neutral-700 mb-2">
+              <label
+                htmlFor="confirmPassword"
+                className="block text-sm font-medium text-neutral-700 mb-2"
+              >
                 Confirm Password
               </label>
               <input
@@ -179,15 +201,18 @@ const SignupPage = () => {
                     Creating account...
                   </div>
                 ) : (
-                  'Create account'
+                  "Create account"
                 )}
               </button>
             </div>
 
             <div className="text-center">
               <span className="text-sm text-neutral-600">
-                Already have an account?{' '}
-                <Link to="/login" className="font-medium text-primary-600 hover:text-primary-500">
+                Already have an account?{" "}
+                <Link
+                  to="/login"
+                  className="font-medium text-primary-600 hover:text-primary-500"
+                >
                   Sign in here
                 </Link>
               </span>
