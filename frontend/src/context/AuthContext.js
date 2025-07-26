@@ -244,8 +244,10 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const signup = async (email, password, name, passwordConfirm) => {
+  const signup = async (email, password, name, confirmPassword) => {
     // Removed 'role' parameter
+    console.log(password);
+    console.log(confirmPassword);
     try {
       const response = await axios.post(
         `${API_URL}/auth/register`,
@@ -254,7 +256,7 @@ export const AuthProvider = ({ children }) => {
           email,
           password,
           name, // Match backend user model
-          passwordConfirm,
+          confirmPassword,
           // role is removed from here. It will be 'team-member' by default on backend.
         },
         {
@@ -267,7 +269,7 @@ export const AuthProvider = ({ children }) => {
         token: receivedToken,
         data: { user: userData },
       } = response.data;
-
+      console.log(receivedToken);
       localStorage.setItem("token", receivedToken);
       setToken(receivedToken);
       setUser(userData);
@@ -301,7 +303,7 @@ export const AuthProvider = ({ children }) => {
       setToken(null);
       setUser(null);
       delete authAxios.defaults.headers.common["Authorization"];
-      navigate("/auth"); // Redirect to login page after logout
+      navigate("/login"); // Redirect to login page after logout
     }
   };
 

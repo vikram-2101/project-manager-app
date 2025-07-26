@@ -8,7 +8,9 @@ const SignupPage = () => {
     email: "",
     password: "",
     confirmPassword: "",
-    role: "team_member",
+    // It's generally safer to set a default role on the backend for signup,
+    // or if exposed here, ensure stringent backend validation.
+    // role: "team_member", // Keeping this as a default
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -20,7 +22,13 @@ const SignupPage = () => {
       ...formData,
       [e.target.name]: e.target.value,
     });
+    // Clear error message as user types
     if (error) setError("");
+  };
+
+  const validateEmail = (email) => {
+    // Basic regex for email validation
+    return /\S+@\S+\.\S+/.test(email);
   };
 
   const handleSubmit = async (e) => {
@@ -28,28 +36,53 @@ const SignupPage = () => {
     setLoading(true);
     setError("");
 
-    // Validation
+    // --- Client-side Validation ---
+    if (!formData.fullName.trim()) {
+      setError("Full Name cannot be empty.");
+      setLoading(false);
+      return;
+    }
+
+    if (!validateEmail(formData.email)) {
+      setError("Please enter a valid email address.");
+      setLoading(false);
+      return;
+    }
+
     if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match");
+      setError("Passwords do not match.");
       setLoading(false);
       return;
     }
 
-    if (formData.password.length < 6) {
-      setError("Password must be at least 6 characters long");
+    if (formData.password.length < 8) {
+      // Increased minimum password length
+      setError("Password must be at least 8 characters long.");
       setLoading(false);
       return;
     }
+    // Consider adding more password complexity checks here if desired for UX
+    // e.g., requiring a mix of uppercase, lowercase, numbers, symbols.
+    // However, the most critical enforcement is on the backend.
 
+    // No client-side validation for 'role' if it's not user-selectable,
+    // and rely on backend for proper assignment.
+
+    // --- Send data to backend via AuthContext's signup function ---
     const result = await signup(
       formData.email,
       formData.password,
       formData.fullName,
-      formData.role
+      formData.confirmPassword // Send the role to the backend
     );
 
     if (!result.success) {
       setError(result.message);
+    } else {
+      // Handle successful signup, e.g., redirect to login or dashboard
+      // console.log("Signup successful!");
+      // Example: history.push('/login'); // If using useHistory from react-router-dom
+      setError("Account created successfully! You can now log in."); // Or redirect
     }
 
     setLoading(false);
@@ -128,28 +161,6 @@ const SignupPage = () => {
                 onChange={handleChange}
               />
             </div>
-
-            {/* <div>
-              <label htmlFor="role" className="block text-sm font-medium text-neutral-700 mb-2">
-                Role
-              </label>
-              <select
-                id="role"
-                name="role"
-                className="input-field"
-                value={formData.role}
-                onChange={handleChange}
-              >
-                <option value="team_member">Team Member</option>
-                <option value="admin">Admin</option>
-              </select>
-              <p className="text-xs text-neutral-500 mt-1">
-                {formData.role === 'admin' ? 
-                  'Can create projects, manage team members, and moderate content' : 
-                  'Can view assigned projects, complete tasks, and add comments'
-                }
-              </p>
-            </div> */}
 
             <div>
               <label
